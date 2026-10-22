@@ -1,0 +1,38 @@
+# --- DATOS CRUDOS MASIVOS (~6.7 GB) ---
+# Se ignoran para cumplir con el límite de 100 MB por archivo de GitHub
+csv/
+*.csv
+
+# --- PYTHON & CACHES ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Entornos virtuales
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# --- IDEs Y EDITORES ---
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# --- SISTEMA OPERATIVO ---
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+desktop.ini
+
+# Logs y temporales
+*.log
