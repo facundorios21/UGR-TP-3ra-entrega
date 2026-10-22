@@ -75,10 +75,12 @@ pip install -r requirements.txt
 ### 3. Ejecutar el Análisis
 Los datasets procesados (`data_processed/`) ya se encuentran incluidos en el repositorio (ocupan solo 11.6 MB en conjunto), por lo que **no es necesario descargar los 6.7 GB de CSVs originales** para reproducir los resultados:
 
-- **Ejecución vía script:**
+- **Ejecución vía script (regenera gráficos y tablas):**
   ```bash
   python run_analysis.py
   ```
+  *(Opcional: Si colocaste los 6 CSVs originales en `csv/` y deseas forzar la re-ingesta completa de los 70M de registros desde cero, ejecuta: `python run_analysis.py --force-reprocess`).*
+
 - **Exploración interactiva en Jupyter Notebook:**
   ```bash
   jupyter notebook notebook_eda_subte.ipynb
