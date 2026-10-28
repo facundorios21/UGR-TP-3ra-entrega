@@ -1,93 +1,72 @@
-# Variación de la Demanda en el Subte de CABA (Líneas A, B y C)
-### Preprocesamiento Masivo, Análisis Exploratorio de Datos (EDA) y Validación Estadística (2014–2019)
+# Variación y Modelado Predictivo de la Demanda en el Subte de CABA (Líneas A, B y C)
+### Preprocesamiento Masivo, EDA, Validación Estadística, Ingeniería de Series Temporales y Aprendizaje Supervisado (2014–2019)
 
-Este repositorio contiene el pipeline analítico y el código fuente para el estudio empírico de la demanda de pasajeros en la Red de Subterráneos de la Ciudad Autónoma de Buenos Aires (Líneas A, B y C), evaluando la heterogeneidad entre **días hábiles y no laborables** (sábados, domingos y feriados nacionales).
+Este repositorio contiene el pipeline analítico y predictivo completo para el estudio empírico y modelado de la demanda de pasajeros en la Red de Subterráneos de la Ciudad Autónoma de Buenos Aires (Líneas A, B y C, 44 estaciones), evaluando la heterogeneidad entre **días hábiles y no laborables** (sábados, domingos y feriados nacionales) bajo la metodología **CRISP-DM adaptada a series temporales** (Fases 1 a 8).
 
 ---
 
-## 📊 Principales Hallazgos y Resultados
+## 📊 Principales Hallazgos y Resultados (EDA + Modelado)
 
-1. **Volumen Procesado:** Más de 70 millones de transacciones de molinetes consolidadas en **44 estaciones** oficiales en intervalos de 15 minutos y agregados diarios.
-2. **Heterogeneidad Estadística (Kolmogorov-Smirnov):** Se rechazó $H_0$ en el **100% de las 44 estaciones** ($p < 10^{-15}$ en todas), validando que las distribuciones temporales de demanda en días no laborales difieren cuantitativa y cualitativamente del régimen laboral.
-3. **Ratio Global de Retención:** La demanda no laborable retiene en promedio un **42,03%** del flujo hábil (caída del 57,97%).
-   - *Mayor Retención (Polos recreativos / transbordo):* **Carlos Gardel (70,43%)**, **Independencia (50,24%)**, **Retiro (49,14%)** y **Plaza Miserere (49,07%)**.
-   - *Mayor Contracción (Distrito financiero / administrativo):* **Diagonal Norte (28,72%)**, **Plaza de Mayo (28,99%)** y **Florida (30,18%)**.
-4. **Presión de Andén:** Se identificaron ventanas críticas en fines de semana donde la tasa de afluencia por 15 minutos en nodos de transbordo (Constitución, Retiro, Lacroze) supera los 1.200 a 1.500 pax, provocando hacinamiento transitorio ante reducciones excesivas de frecuencias.
+1. **Volumen Procesado y Grilla Temporal:** Más de 70 millones de transacciones de molinetes consolidadas en **44 estaciones** (2014–2019) y regularizadas en una matriz equidistante de **7.145.292 registros** (76 ventanas comerciales de 15 min por día, `05:00` a `23:45`).
+2. **Heterogeneidad Estadística (Kolmogorov-Smirnov):** Se rechazó $H_0$ en el **100% de las 44 estaciones** ($p < 10^{-15}$), validando que las distribuciones de demanda en días no laborables difieren estructuralmente del régimen laboral.
+3. **Modelado Supervisado (Regresión Lineal vs. Gradient Boosting / XGBoost):**
+   - Bajo partición estrictamente cronológica (*Time-Based Splitting*: `Train` 2014–2017, `Val` 2018, `Test` 2019), **XGBoost** redujo el **RMSE en un 23,25%** (`55,89` vs `72,82` pax/15min) y el **MAE en un 32,34%** (`22,20` vs `32,80` pax/15min) respecto a la Regresión Lineal en el año de prueba (2019), logrando **$R^2 = 0,9504$**.
+4. **Métricas Operativas Derivadas (Fase 8):**
+   - El modelo predice el Ratio de Retención por estación con un error medio de solo **0,58 puntos porcentuales**, captura el desplazamiento horario de los picos (*peak shift* hacia la franja vespertina) y clasifica las 44 estaciones en **4 Categorías Operativas según Presión de Andén**.
 
 ---
 
 ## 📁 Estructura del Repositorio
 
 ```text
-EDA/
-├── data_processed/                     # Datasets procesados de alta eficiencia (formato Parquet)
-│   ├── subte_consolidado_15min.parquet # Demanda cada 15 min por estación (11.3 MB)
-│   └── subte_diario_estaciones.parquet # Demanda diaria consolidada (356 KB)
+UGR-TP-3ra-entrega/
+├── data_processed/                     # Datasets procesados en formato Parquet
+│   ├── subte_consolidado_15min.parquet # Demanda agregada cada 15 min (2014-2019)
+│   ├── subte_diario_estaciones.parquet # Demanda diaria consolidada por estación
+│   └── subte_modelado_15min.parquet    # Matriz equidistante con lags y geolocalización (7.14M filas)
 ├── output/
-│   ├── graficos/                       # Figuras analíticas en alta resolución (PNG 300 DPI)
+│   ├── graficos/                       # Figuras analíticas y de modelado en alta resolución (300 DPI)
 │   │   ├── 01_curva_demanda_dia_semana.png
 │   │   ├── 02_curva_demanda_estacional_mes.png
 │   │   ├── 03_perfil_horario_por_linea.png
 │   │   ├── 04_comparativa_habil_nolab_estaciones_clave.png
 │   │   ├── 05_kde_habil_vs_nolaborable.png
-│   │   └── 06_presion_anden_ventanas_criticas.png
-│   ├── tablas/                         # Tablas tabuladas en Markdown
+│   │   ├── 06_presion_anden_ventanas_criticas.png
+│   │   ├── 07_comparativa_prediccion_real_vs_modelos.png
+│   │   ├── 08_evaluacion_errores_e_importancia_variables.png
+│   │   └── 09_categorizacion_estaciones_presion_predicha.png
+│   ├── tablas/                         # Tablas tabuladas en Markdown (Fases 3 a 8)
 │   │   ├── 01_resumen_nulos_limpieza.md
 │   │   ├── 02_estadisticas_descriptivas.md
 │   │   ├── 03_ratios_retencion_linea.md
 │   │   ├── 04_ratios_retencion_top_bottom_estaciones.md
 │   │   ├── 05_resultados_kolmogorov_smirnov_44_estaciones.md
-│   │   └── 06_presion_anden_analisis.md
-│   └── resumen_metodologia.md          # Síntesis interpretativa para la sección escrita
-├── src/                                # Scripts Python modulares
+│   │   ├── 06_presion_anden_analisis.md
+│   │   ├── 07_auditoria_limpieza_modelado.md
+│   │   ├── 08_comparativa_modelos_metricas.md
+│   │   └── 09_metricas_operativas_predichas.md
+│   └── resumen_metodologia.md          # Síntesis interpretativa para el informe
+├── src/                                # Módulos Python del pipeline
 │   ├── preprocesamiento.py             # Ingesta por bloques, sanitización y normalización
-│   ├── eda_visualizaciones.py          # Generador de gráficos continuos en alta resolución
-│   ├── validacion_estadistica.py       # Test K-S, ratios de retención y presión de andén
-│   └── generar_notebook.py             # Generador del notebook interactivo
-├── notebook_eda_subte.ipynb            # Jupyter Notebook reproducible de principio a fin
-├── run_analysis.py                     # Script maestro para ejecución end-to-end
-├── requirements.txt                    # Dependencias del proyecto
-└── .gitignore                          # Exclusión de datos crudos (6.7 GB) y temporales
+│   ├── eda_visualizaciones.py          # Generador de gráficos EDA (Figuras 01 a 06)
+│   ├── validacion_estadistica.py       # Test K-S, ratios de retención y presión de andén histórica
+│   ├── estaciones_geo.py               # Coordenadas geolocalizadas y metadatos espaciales (44 estaciones)
+│   ├── preparacion_modelado.py         # Grilla equidistante, limpieza de cierres/outliers, lags y split temporal
+│   ├── modelado_evaluacion.py          # Regresión Lineal vs XGBoost, evaluación MSE/RMSE/MAE y Fase 8
+│   └── generar_notebook.py             # Generador del Jupyter Notebook reproducible
+├── notebook_eda_subte.ipynb            # Jupyter Notebook completo (EDA + Modelado + Evaluación)
+├── run_analysis.py                     # Script orquestador end-to-end (Pasos 1 a 5)
+└── requirements.txt                    # Dependencias del proyecto
 ```
 
 ---
 
-## 🚀 Instalación y Puesta en Marcha
+## 🚀 Ejecución del Pipeline
 
-### 1. Clonar el Repositorio
 ```bash
-git clone <URL_DEL_REPOSITORIO>
-cd EDA
+# Ejecutar todo el pipeline (EDA + Preparación Modelado + Entrenamiento y Evaluación):
+python run_analysis.py
+
+# Ejecutar únicamente la preparación para modelado y entrenamiento (Pasos 4 y 5):
+python run_analysis.py --only-modeling
 ```
-
-### 2. Instalar Dependencias
-Se recomienda utilizar un entorno virtual con Python 3.10 o superior:
-```bash
-python -m venv venv
-# En Windows:
-.\venv\Scripts\activate
-# En Linux/macOS:
-source venv/bin/activate
-
-pip install -r requirements.txt
-```
-
-### 3. Ejecutar el Análisis
-Los datasets procesados (`data_processed/`) ya se encuentran incluidos en el repositorio (ocupan solo 11.6 MB en conjunto), por lo que **no es necesario descargar los 6.7 GB de CSVs originales** para reproducir los resultados:
-
-- **Ejecución vía script (regenera gráficos y tablas):**
-  ```bash
-  python run_analysis.py
-  ```
-  *(Opcional: Si colocaste los 6 CSVs originales en `csv/` y deseas forzar la re-ingesta completa de los 70M de registros desde cero, ejecuta: `python run_analysis.py --force-reprocess`).*
-
-- **Exploración interactiva en Jupyter Notebook:**
-  ```bash
-  jupyter notebook notebook_eda_subte.ipynb
-  ```
-
----
-
-## 📄 Licencia y Fuentes
-- **Fuente de datos:** Registros de molinetes del Subterráneo de la Ciudad Autónoma de Buenos Aires (Líneas A, B y C - 2014 a 2019).
-- Desarrollado como parte de la investigación en Metodología y Análisis de Operación de Transporte Público.

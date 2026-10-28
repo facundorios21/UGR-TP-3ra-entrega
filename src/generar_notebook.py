@@ -6,22 +6,20 @@ nb = nbf.v4.new_notebook()
 cells = []
 
 # Title & intro
-cells.append(nbf.v4.new_markdown_cell("""# Análisis de Demanda del Subte de CABA (Líneas A, B y C)
-### Preprocesamiento, Análisis Exploratorio de Datos (EDA) y Validación Estadística (2014 - 2019)
-**Autor:** Senior Data Scientist & Analista Operativo de Transporte Público  
-**Proyecto:** Evaluación de la Variación de la Demanda en el Subte de CABA en Días Hábiles y No Laborables
+cells.append(nbf.v4.new_markdown_cell("""# Análisis y Modelado Predictivo de la Demanda del Subte de CABA (Líneas A, B y C)
+### Preprocesamiento Masivo, EDA, Validación Estadística, Ingeniería de Series Temporales y Aprendizaje Supervisado (2014 - 2019)
+**Grupo 34 — Licenciatura en Ciencia de Datos (UGR)**  
+**Proyecto:** Variación de la Demanda en el Subte de Buenos Aires en Días Hábiles y No Laborables
 
 ---
 ## 1. Introducción y Objetivos Metodológicos
-El presente análisis tiene como objetivo modelar, contrastar y validar estadísticamente las diferencias de la demanda de pasajeros en la Red de Subterráneos de la Ciudad Autónoma de Buenos Aires (Líneas A, B y C) entre **días hábiles** y **no laborables** (sábados, domingos y feriados nacionales).
+El presente cuaderno reproducible desarrolla de principio a fin las **Fases 1 a 8 de la metodología CRISP-DM adaptada a series temporales**, evaluando y modelando la demanda de pasajeros en la Red de Subterráneos de la Ciudad Autónoma de Buenos Aires (Líneas A, B y C y sus 44 estaciones) entre **días hábiles** y **no laborables** (sábados, domingos y feriados nacionales) durante el período **2014–2019**:
 
-A lo largo de este notebook se abordan:
-1. **Preprocesamiento y Sanitización:** Ingesta por bloques de más de 70 millones de transacciones de molinete, normalización de esquemas, encodings y nombres de las 44 estaciones de las Líneas A, B y C.
-2. **Ingeniería Temporal:** Incorporación del calendario oficial de feriados nacionales de Argentina y discriminación de tipos de día.
-3. **Análisis Exploratorio de Datos (EDA):** Perfiles horarios, picos de demanda y estacionalidad mensual con ejes temporales continuos.
-4. **Métricas de Retención de Demanda:** Cuantificación del ratio de retención de demanda global, por línea y por estación.
-5. **Validación Estadística (Kolmogorov-Smirnov):** Evaluación no paramétrica sobre las 44 estaciones independientes.
-6. **Presión de Andén e Implicancias Operativas:** Detección de intervalos críticos de congestión en fines de semana."""))
+1. **Preprocesamiento y Sanitización (Fases 1 a 3):** Ingesta de más de 70 millones de registros de molinete, normalización de esquemas y unificación de las 44 estaciones.
+2. **Análisis Exploratorio de Datos y Comparación de Distribuciones (Fase 4):** Curvas de demanda, perfiles horarios, KDE y prueba no paramétrica de **Kolmogorov-Smirnov (`ks_2samp`)** estación por estación.
+3. **Limpieza para Series Temporales e Ingeniería de Características (Fases 3 y 5):** Filtrado de horario comercial (`05:00`–`23:45`), detección de cierres estructurales de estación, regularización de grilla equidistante de 15 min, acotamiento de outliers de telemetría, construcción de rezagos autoregresivos (`lag_1`, `lag_2`, `lag_4`, `lag_1d`, `lag_7d`, `media_movil_1h`), variables armónicas y geolocalización de estaciones.
+4. **Modelado y Evaluación Temporal (Fases 6 y 7):** Partición cronológica (*Time-Based Splitting*: `Train` 2014–2017, `Val` 2018, `Test` 2019) y comparación entre **Regresión Lineal** y **Gradient Boosting (`XGBoost`)** mediante **MSE, RMSE y MAE** en horizontes *One-Step* (+15 min) y *Multi-Step* (+30 min y +60 min).
+5. **Métricas Operativas Derivadas (Fase 8):** Cálculo de Ratio de Retención Predicho, Desplazamiento de Horas Pico y Categorización Operativa de las 44 estaciones por Presión de Andén."""))
 
 # Imports
 cells.append(nbf.v4.new_code_cell("""# Librerías esenciales
@@ -39,12 +37,12 @@ import holidays
 plt.style.use('seaborn-v0_8-whitegrid' if 'seaborn-v0_8-whitegrid' in plt.style.available else 'default')
 plt.rcParams['font.sans-serif'] = 'Arial'
 plt.rcParams['figure.dpi'] = 150
-pd.set_option('display.max_columns', 20)
+pd.set_option('display.max_columns', 25)
 pd.set_option('display.float_format', lambda x: '%.2f' % x)
 print("Entorno configurado correctamente.")"""))
 
 # Data loading / inspection
-cells.append(nbf.v4.new_markdown_cell("""## 2. Carga y Consolidación de Datos
+cells.append(nbf.v4.new_markdown_cell("""## 2. Carga y Consolidación de Datos (2014–2019)
 Para optimizar el uso de memoria RAM frente a los 6.7 GB de archivos CSV brutos, se recurre al dataset consolidado a nivel de estación e intervalo de 15 minutos (`data_processed/subte_consolidado_15min.parquet`) y a la agregación diaria (`data_processed/subte_diario_estaciones.parquet`)."""))
 
 cells.append(nbf.v4.new_code_cell("""# Carga de datasets optimizados
@@ -80,7 +78,7 @@ desc_diario['IQR'] = desc_diario['Q75'] - desc_diario['Q25']
 display(desc_diario)"""))
 
 # EDA 1: Perfil horario por día de la semana
-cells.append(nbf.v4.new_markdown_cell("""## 4. Análisis Exploratorio de Datos (EDA)
+cells.append(nbf.v4.new_markdown_cell("""## 4. Análisis Exploratorio de Datos (EDA) — Fase 4
 ### 4.1. Curva de Demanda por Día de la Semana y Detección de Horas Pico
 Visualización en 2 paneles: Panel A para días hábiles (Lunes a Viernes) con resaltado preciso de horas pico matutina y vespertina; Panel B para fines de semana (Sábado y Domingo) contrastados contra la referencia hábil."""))
 
@@ -204,7 +202,7 @@ plt.tight_layout()
 plt.show()"""))
 
 # Retention metrics
-cells.append(nbf.v4.new_markdown_cell("""## 5. Ratios de Retención de Demanda
+cells.append(nbf.v4.new_markdown_cell("""## 5. Ratios de Retención de Demanda Histórica
 El Ratio de Retención mide la proporción de demanda habitual que persiste en días no laborables:
 $$\\text{Ratio de Retención (\\%)} = \\frac{\\overline{\\text{Ingresos Diarios}}_{\\text{No Laborable}}}{\\overline{\\text{Ingresos Diarios}}_{\\text{Hábil}}} \\times 100$$"""))
 
@@ -227,7 +225,7 @@ print("\\n=== TOP 5 ESTACIONES CON MAYOR CAÍDA DE DEMANDA ===")
 display(ret_est.tail(5).iloc[::-1])"""))
 
 # KDE
-cells.append(nbf.v4.new_markdown_cell("""## 6. Validación Estadística e Indicadores Operativos
+cells.append(nbf.v4.new_markdown_cell("""## 6. Validación Estadística de Heterogeneidad (Sección 2.5 y Fase 4)
 ### 6.1. Estimación de Densidad por Kernel (KDE)
 Contraste de formas de distribución en estaciones representativas."""))
 
@@ -284,27 +282,42 @@ print(f"Total estaciones analizadas: {len(df_ks_res)}")
 print(f"Estaciones que rechazan H0: {rechazos} ({(rechazos/len(df_ks_res))*100:.1f}%)")
 display(df_ks_res.head(10))"""))
 
-# Platform pressure
-cells.append(nbf.v4.new_markdown_cell("""### 6.3. Presión de Andén en Días No Laborables
-Identificación de ventanas horarias críticas de fin de semana donde el flujo de molinete compromete la capacidad nominal de despacho de formaciones (umbral nominal estimado en 1,200 pax/15m)."""))
+# Fase 3 avanzada y Fase 5: Preparación para el Modelado
+cells.append(nbf.v4.new_markdown_cell("""## 7. Limpieza Avanzada para Series Temporales e Ingeniería de Características (Fases 3 y 5)
+Para entrenar los modelos supervisados de regresión (**Regresión Lineal** y **Gradient Boosting / XGBoost**) sin inducir sesgos ni fuga de datos (*data leakage*), se ejecuta el módulo `src.preparacion_modelado`:
+1. **Recorte de Horario Comercial (`05:00` a `23:45`):** Exclusión de registros nocturnos residuales fuera de servicio (76 ventanas equidistantes por jornada).
+2. **Nulos Estructurales vs. Operativos:** Exclusión de jornadas con cierre total de estación por obras o paros ($<20\\text{ pax/día}$) y regularización de la grilla equidistante de 15 minutos completando con `0` las ventanas operativas activas sin validaciones.
+3. **Tratamiento de Outliers de Telemetría:** Acotamiento (*winsorización*) de descargas acumuladas de molinete usando umbrales robustos ($\\max(Q_{99.9}, Q_{75} + 4.5\\cdot\\text{IQR})$) estimados exclusivamente sobre el set de entrenamiento.
+4. **Ingeniería de Características:** Rezagos autoregresivos (`lag_1`, `lag_2`, `lag_4`, `lag_1d`, `lag_7d`, `media_movil_1h`), variables armónicas (`sin_hora`, `cos_hora`, `sin_dia_semana`, `cos_dia_semana`) y variables espaciales/geolocalizadas (`latitud`, `longitud`, `distancia_centro_km`, `orden_linea`, `es_cabecera`, `es_combinacion`).
+5. **Partición Cronológica (*Time-Based Splitting*):** `Train` (2014–2017), `Validación` (2018) y `Test` (2019)."""))
 
-cells.append(nbf.v4.new_code_cell("""UMBRAL_PRESION = 1200
-criticos = df_15min[(df_15min['tipo_dia'] == 'No Laborable') & (df_15min['ingresos'] >= UMBRAL_PRESION)]
-print(f"Intervalos críticos registrados en no laborables: {len(criticos):,}")
+cells.append(nbf.v4.new_code_cell("""from src.preparacion_modelado import prepare_modeling_data
 
-top_presion = criticos.groupby(['linea', 'estacion', 'ventana_15min'])['ingresos'].agg(
-    Ocurrencias='count',
-    Ingreso_Max='max',
-    Ingreso_Prom='mean'
-).reset_index().sort_values(by='Ingreso_Max', ascending=False)
+df_modelado_path = os.path.join('data_processed', 'subte_modelado_15min.parquet')
+if not os.path.exists(df_modelado_path):
+    df_modelado = prepare_modeling_data()
+else:
+    df_modelado = pd.read_parquet(df_modelado_path)
 
-display(top_presion.head(10))"""))
+print(f"Dimensiones de la matriz de modelado: {df_modelado.shape}")
+display(df_modelado['particion'].value_counts())
+display(df_modelado[['fecha', 'linea', 'estacion', 'ventana_15min', 'ingresos', 'lag_1', 'lag_1d', 'lag_7d', 'distancia_centro_km', 'particion']].head(10))"""))
+
+# Fases 6, 7 y 8: Modelado, Evaluación y Métricas Operativas
+cells.append(nbf.v4.new_markdown_cell("""## 8. Entrenamiento, Evaluación Temporal y Métricas Operativas Derivadas (Fases 6, 7 y 8)
+Se entrenan y comparan **Regresión Lineal** (con `StandardScaler` ajustado únicamente en `train`) y **Gradient Boosting (`XGBRegressor`)**, evaluando **MSE**, **RMSE** y **MAE** sobre los conjuntos de Validación (2018) y Prueba (2019), tanto en horizonte *One-Step* (+15 min) como *Multi-Step* (+30 min y +60 min). Finalmente, sobre las predicciones en el año de prueba (2019), se calculan el **Ratio de Retención Predicho**, el **Desplazamiento de Horas Pico** y la **Categorización de las 44 Estaciones por Presión de Andén**."""))
+
+cells.append(nbf.v4.new_code_cell("""from src.modelado_evaluacion import run_modeling_and_evaluation
+
+# Ejecuta el entrenamiento/evaluación y exporta las tablas 08 y 09 y los gráficos 07, 08 y 09
+run_modeling_and_evaluation()"""))
 
 # Conclusions
-cells.append(nbf.v4.new_markdown_cell("""## 7. Conclusiones y Resumen para Metodología
+cells.append(nbf.v4.new_markdown_cell("""## 9. Conclusiones y Resumen para Metodología
 1. **Heterogeneidad Demostrada al 100%:** La prueba de Kolmogorov-Smirnov rechaza $H_0$ en la totalidad de las 44 estaciones ($p < 10^{-15}$), confirmando que las curvas y distribuciones de demanda no laboral difieren estructuralmente del régimen laboral.
 2. **Asimetría Territorial y Ratios de Retención:** La retención global del 42,03% enmascara brechas extremas entre el Microcentro (caídas superiores al 70% en Diagonal Norte y Plaza de Mayo) y polos recreativos o de transbordo (Carlos Gardel retiene 70,43%; Constitución retiene casi 35.000 pax/día).
-3. **Optimización de Frecuencias:** La reducción indiscriminada de material rodante en fines de semana induce picos de saturación de andén en intervalos de transbordo masivo. Se fundamenta la adopción de diagramaciones operativas dinámicas basadas en la vocación territorial de cada corredor."""))
+3. **Superioridad del Ensamble No Lineal (XGBoost vs. Regresión Lineal):** El modelo de Gradient Boosting captura las interacciones no lineales entre estación, hora y tipo de día, reduciendo el RMSE en un **23,25%** (55,89 vs. 72,82 pax/15min) y el MAE en un **32,34%** (22,20 vs. 32,80 pax/15min) en el año de prueba 2019, alcanzando un $R^2 = 0,9504$.
+4. **Optimización de Frecuencias Basada en Predicciones (Fase 8):** La categorización de las 44 estaciones mediante la presión de andén predicha identifica 8 nodos críticos de saturación en días no laborables y fundamenta la adopción de diagramaciones operativas dinámicas por corredor y franja horaria."""))
 
 nb.cells = cells
 
